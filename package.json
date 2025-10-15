@@ -1,0 +1,11 @@
+{
+  "name": "ai-api-broker",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "npm -w apps/gateway run build && npm -w apps/site run build",
+    "dev:site": "npm -w apps/site run dev",
+    "deploy:gateway": "npm -w apps/gateway run deploy",
+    "preview:gateway": "npm -w apps/gateway run preview"
+  }
+}

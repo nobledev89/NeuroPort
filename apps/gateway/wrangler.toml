@@ -1,0 +1,21 @@
+name = "ai-api-broker-gateway"
+main = "./dist/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+# Set via dashboard or wrangler secret
+RAPIDAPI_SECRET = "replace-in-dashboard"
+STRIPE_PRICE_USD_PER_CREDIT = "0.01" # 1 cent/credit retail
+MARGIN_MULTIPLIER = "1.8"            # 80% markup target (edit per route)
+
+[[kv_namespaces]]
+binding = "KV"
+id = "286f3e41289c498aa492b22f0166116b"
+
+## D1 removed for initial setup; re-add if needed later
+
+[observability.logs]
+enabled = true
+
+[ai]
+binding = "AI"
