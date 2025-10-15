@@ -34,12 +34,17 @@ echo.
 echo.
 
 echo [6/7] Testing Gemini chat...
-curl.exe -s -X POST %GATEWAY_URL%/v1/chat -H "Authorization: Bearer TEST" -H "Content-Type: application/json" -d "{\"provider\":\"gemini\",\"model\":\"gemini-1.5-flash-latest\",\"messages\":[{\"role\":\"user\",\"content\":\"Say just 'greetings' in one word\"}]}"
+curl.exe -s -X POST %GATEWAY_URL%/v1/chat -H "Authorization: Bearer TEST" -H "Content-Type: application/json" -d "{\"provider\":\"gemini\",\"model\":\"gemini-2.5-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Say just 'greetings' in one word\"}]}"
 echo.
 echo.
 
-echo [7/7] Testing Image generation (OpenAI)...
+echo [7/8] Testing Image generation (OpenAI)...
 curl.exe -s -X POST %GATEWAY_URL%/v1/image -H "Authorization: Bearer TEST" -H "Content-Type: application/json" -d "{\"model\":\"dall-e-3\",\"prompt\":\"a tiny red square on white background\",\"n\":1,\"response_format\":\"url\"}"
+echo.
+echo.
+
+echo [8/8] Testing Image generation (Gemini)...
+curl.exe -s -X POST %GATEWAY_URL%/v1/image -H "Authorization: Bearer TEST" -H "Content-Type: application/json" -d "{\"provider\":\"gemini\",\"model\":\"gemini-2.5-flash-image\",\"prompt\":\"a tiny red square on white background\"}"
 echo.
 echo.
 

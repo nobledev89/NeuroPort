@@ -31,12 +31,12 @@ chat.post('/v1/chat', async (c) => {
   }
 
   function normalizeGeminiModel(name: string) {
-    if (!name) return 'gemini-1.5-flash-latest';
+    if (!name) return 'gemini-2.5-flash';
     // Map OpenAI-style defaults to a safe Gemini default
-    if (name.startsWith('gpt-')) return 'gemini-1.5-flash-latest';
-    // Ensure -latest suffix if not versioned (e.g., 001) or -latest
-    const hasVersion = /-(\d+)$/.test(name) || /-latest$/.test(name);
-    if (!hasVersion && name.startsWith('gemini-')) return `${name}-latest`;
+    if (name.startsWith('gpt-')) return 'gemini-2.5-flash';
+    // Prefer 2.5 family when users request 1.5
+    if (/^gemini-1\.5-/.test(name)) return 'gemini-2.5-flash';
+    // Keep stable names as-is; allow explicit versions
     return name;
   }
 
