@@ -9,35 +9,54 @@ export class Redis {
   async incrby(key: string, n: number) { return (await fetch(`${this.url}/incrby/${encodeURIComponent(key)}/${n}`, { method: 'POST', headers: { Authorization: `Bearer ${this.token}` } })).json(); }
 }
 
-export interface Env { UPSTASH_REDIS_REST_URL: string; UPSTASH_REDIS_REST_TOKEN: string; KV: KVNamespace; RAPIDAPI_SECRET: string; }
+export interface Env { UPSTASH_REDIS_REST_URL?: string; UPSTASH_REDIS_REST_TOKEN?: string; KV: KVNamespace; RAPIDAPI_SECRET?: string; }
 
 export function redisFromEnv(env: Env) {
-  return new Redis(env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN);
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    return new Redis(env.UPSTASH_REDIS_REST_URL, env.UPSTASH_REDIS_REST_TOKEN);
+  }
+  return null;
 }
 
 export async function getCredits(env: Env, apiKey: string) {
-  const r = redisFromEnv(env);
   const key = `user:${apiKey}:credits`;
-  const res: any = await r.get(key);
-  return Number(res?.result ?? 0);
+  const r = redisFromEnv(env);
+  if (r) {
+    const res: any = await r.get(key);
+    return Number(res?.result ?? 0);
+  }
+  // Fallback to KV for local/dev without Upstash
+  const raw = await env.KV.get(key);
+  return Number(raw ?? 0);
 }
 
 export async function addCredits(env: Env, apiKey: string, n: number) {
-  const r = redisFromEnv(env);
   const key = `user:${apiKey}:credits`;
-  await r.incrby(key, n);
+  const r = redisFromEnv(env);
+  if (r) {
+    await r.incrby(key, n);
+    return;
+  }
+  const cur = await getCredits(env, apiKey);
+  await env.KV.put(key, String(cur + n));
 }
 
 export async function consumeCredits(env: Env, apiKey: string, n: number) {
-  const r = redisFromEnv(env);
   const key = `user:${apiKey}:credits`;
-  const res: any = await r.decrby(key, n);
-  const after = Number(res?.result ?? 0);
-  if (after < 0) {
-    // rollback
-    await r.incrby(key, n);
-    throw new Error('INSUFFICIENT_CREDITS');
+  const r = redisFromEnv(env);
+  if (r) {
+    const res: any = await r.decrby(key, n);
+    const after = Number(res?.result ?? 0);
+    if (after < 0) {
+      await r.incrby(key, n);
+      throw new Error('INSUFFICIENT_CREDITS');
+    }
+    return after;
   }
+  const cur = await getCredits(env, apiKey);
+  const after = cur - n;
+  if (after < 0) throw new Error('INSUFFICIENT_CREDITS');
+  await env.KV.put(key, String(after));
   return after;
 }
 

@@ -3,6 +3,9 @@ import { cors } from 'hono/cors';
 import { chat } from './routes/chat';
 import { image } from './routes/image';
 import { balance } from './routes/balance';
+import { tts } from './routes/tts';
+import { music } from './routes/music';
+import { webhooks } from './routes/webhooks';
 
 const app = new Hono<{ Bindings: any }>();
 
@@ -18,6 +21,9 @@ app.use('*', cors({
 app.route('/', balance);
 app.route('/', chat);
 app.route('/', image);
+app.route('/', tts);
+app.route('/', music);
+app.route('/', webhooks);
 
 app.get('/', (c) => c.json({ ok: true, service: 'ai-api-broker' }));
 // Minimal OpenAPI descriptor for marketplaces
@@ -50,6 +56,22 @@ app.get('/openapi.json', (c) => c.json({
         security: [{ ApiKeyAuth: [] }],
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { model: { type: 'string' }, prompt: { type: 'string' }, n: { type: 'integer' } }, required: ['model','prompt'] } } } },
         responses: { '200': { description: 'Upstream response' } }
+      }
+    },
+    '/v1/tts': {
+      post: {
+        summary: 'Text-to-speech (ElevenLabs)',
+        security: [{ ApiKeyAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { text: { type: 'string' }, voiceId: { type: 'string' }, estimateSeconds: { type: 'number' } }, required: ['text'] } } } },
+        responses: { '200': { description: 'Audio stream or JSON' } }
+      }
+    },
+    '/v1/music': {
+      post: {
+        summary: 'Music generation (Stability)',
+        security: [{ ApiKeyAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+        responses: { '200': { description: 'Audio or JSON' } }
       }
     }
   },

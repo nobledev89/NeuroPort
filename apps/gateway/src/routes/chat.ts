@@ -30,25 +30,68 @@ chat.post('/v1/chat', async (c) => {
     return { ...rest, contents };
   }
 
+  function normalizeGeminiModel(name: string) {
+    if (!name) return 'gemini-1.5-flash-latest';
+    // Map OpenAI-style defaults to a safe Gemini default
+    if (name.startsWith('gpt-')) return 'gemini-1.5-flash-latest';
+    // Ensure -latest suffix if not versioned (e.g., 001) or -latest
+    const hasVersion = /-(\d+)$/.test(name) || /-latest$/.test(name);
+    if (!hasVersion && name.startsWith('gemini-')) return `${name}-latest`;
+    return name;
+  }
+
   // Estimate rough cost → credits to charge (you can refine per token count)
   const estUsd = 0.002; // safe minimum charge per request
   const charge = chargeFor('chat', estUsd, c.env);
   await consumeCredits(c.env as any, apiKey, charge);
 
+  // Demo fallback if provider keys are missing or DEMO_MODE is set
+  const demoMode = String((c.env as any).DEMO_MODE || '').toLowerCase() === 'true';
+
+  function demoResponse(text: string) {
+    return new Response(JSON.stringify({
+      id: 'demo',
+      object: 'chat.completion',
+      choices: [{ index: 0, message: { role: 'assistant', content: text } }]
+    }), { headers: { 'Content-Type': 'application/json' } });
+  }
+
   let res: Response;
   try {
     switch (provider) {
-      case 'openai':
-        res = await openaiChat(c.env.OPENAI_API_KEY, forwardBody);
+      case 'openai': {
+        const key = (c.env as any).OPENAI_API_KEY;
+        if (!key || demoMode) {
+          res = demoResponse('hi');
+        } else {
+          res = await openaiChat(key, forwardBody);
+        }
         break;
-      case 'anthropic':
-        res = await anthropicChat(c.env.ANTHROPIC_API_KEY, forwardBody);
+      }
+      case 'anthropic': {
+        // Anthropic requires max_tokens
+        const anthropicBody = {
+          ...forwardBody,
+          max_tokens: forwardBody.max_tokens || 1024
+        };
+        const key = (c.env as any).ANTHROPIC_API_KEY;
+        if (!key || demoMode) {
+          res = demoResponse('hello');
+        } else {
+          res = await anthropicChat(key, anthropicBody);
+        }
         break;
+      }
       case 'gemini': {
         const gemBody = toGeminiBody(forwardBody);
         // Default to a valid Gemini model name if caller sent an OpenAI default
-        const gemModel = model && model.startsWith('gpt-') ? 'gemini-1.5-flash' : model;
-        res = await geminiChat(c.env.GOOGLE_API_KEY, gemModel, gemBody);
+        const gemModel = normalizeGeminiModel(model);
+        const key = (c.env as any).GOOGLE_API_KEY;
+        if (!key || demoMode) {
+          res = demoResponse('greetings');
+        } else {
+          res = await geminiChat(key, gemModel, gemBody);
+        }
         break;
       }
       default: return c.json({ error: 'Unsupported provider' }, 400);
@@ -60,6 +103,6 @@ chat.post('/v1/chat', async (c) => {
     return c.json({ error: 'Upstream error', detail: String(err) }, 502);
   }
 
-  await logUsage(c.env as any, apiKey, 'chat', { provider, model, charge });
+  c.executionCtx?.waitUntil(logUsage(c.env as any, apiKey, 'chat', { provider, model, charge }));
   return res;
 });

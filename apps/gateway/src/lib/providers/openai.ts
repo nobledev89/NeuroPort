@@ -4,6 +4,7 @@ export async function openaiChat(apiKey: string, body: any) {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify(body)
   });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}`);
   return res;
 }
 
