@@ -7,7 +7,9 @@ export function getApiKey(c: Context) {
     return null; // invalid RapidAPI proxy secret
   }
   const key = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '')
-    || c.req.header('X-API-Key') || c.req.query('api_key');
+    || c.req.header('X-RapidAPI-Key')
+    || c.req.header('X-API-Key')
+    || c.req.query('api_key');
   return key || null;
 }
 
